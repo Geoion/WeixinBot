@@ -13,6 +13,7 @@ import logging
 from collections import defaultdict
 from urlparse import urlparse
 from lxml import html
+from random import choice
 
 # for media upload
 import os
@@ -260,7 +261,7 @@ class WebWeixin(object):
 			"List": [ {"UserName": g['UserName'], "EncryChatRoomId":""} for g in self.GroupList ]
 		}
 		dic = self._post(url, params)
-		
+
 		# blabla ...
 		ContactList = dic['ContactList']
 		ContactCount = dic['Count']
@@ -281,7 +282,7 @@ class WebWeixin(object):
 			"List": [ {"UserName": id, "EncryChatRoomId":""} ]
 		}
 		dic = self._post(url, params)
-		
+
 		# blabla ...
 		return dic['ContactList']
 
@@ -395,7 +396,7 @@ class WebWeixin(object):
 
 		multipart_encoder = MultipartEncoder(
 			fields = {
-				'id': 'WU_FILE_' + str(self.media_count), 
+				'id': 'WU_FILE_' + str(self.media_count),
 				'name': file_name,
 				'type': mime_type,
 				'lastModifieDate': lastModifieDate,
@@ -514,7 +515,7 @@ class WebWeixin(object):
 
 		if id[:2] == '@@':
 			# 群
-			name = self.getGroupName(id)	
+			name = self.getGroupName(id)
 		else:
 			# 特殊账号
 			for member in self.SpecialUsersList:
@@ -545,7 +546,7 @@ class WebWeixin(object):
 		return None
 
 	def _showMsg(self, message):
-		
+
 		srcName = None
 		dstName = None
 		groupName = None
@@ -554,7 +555,7 @@ class WebWeixin(object):
 		msg = message
 		logging.debug(msg)
 
-		if msg['raw_msg']: 
+		if msg['raw_msg']:
 			srcName = self.getUserRemarkName(msg['raw_msg']['FromUserName'])
 			dstName = self.getUserRemarkName(msg['raw_msg']['ToUserName'])
 			content = msg['raw_msg']['Content'].replace('&lt;','<').replace('&gt;','>')
@@ -597,7 +598,7 @@ class WebWeixin(object):
 			# 指定了消息内容
 			if 'message' in msg.keys(): content = msg['message']
 
-		
+
 		if groupName != None:
 			print '%s |%s| %s -> %s: %s' % (message_id, groupName.strip(), srcName.strip(), dstName.strip(), content.replace('<br/>','\n'))
 			logging.info('%s |%s| %s -> %s: %s' % (message_id, groupName.strip(), srcName.strip(), dstName.strip(), content.replace('<br/>','\n')))
@@ -624,8 +625,10 @@ class WebWeixin(object):
 			if msgType == 1:
 				raw_msg = { 'raw_msg': msg }
 				self._showMsg(raw_msg)
-				if self.autoReplyMode:
-					ans = self._xiaodoubi(content)+'\n[微信机器人自动回复]'
+				if content == '1':
+					ansssss=['真的吗？','然后呢？','接下来呢？','后来怎么样了？','啊？','哦','哟','怪我咯？']
+					ans = random.choice(ansssss)
+					# ans = 'susses'
 					if self.webwxsendmsg(ans, msg['FromUserName']):
 						print '自动回复: '+ans
 						logging.info('自动回复: '+ans)
@@ -688,7 +691,7 @@ class WebWeixin(object):
 				raw_msg = { 'raw_msg': msg, 'message': '%s 撤回了一条消息' % name }
 				self._showMsg(raw_msg)
 			else:
-				logging.debug('[*] 该消息类型为: %d，可能是表情，图片, 链接或红包: %s' % (msg['MsgType'], json.dumps(msg)))				
+				logging.debug('[*] 该消息类型为: %d，可能是表情，图片, 链接或红包: %s' % (msg['MsgType'], json.dumps(msg)))
 				raw_msg = { 'raw_msg': msg, 'message': '[*] 该消息类型为: %d，可能是表情，图片, 链接或红包' % msg['MsgType'] }
 				self._showMsg(raw_msg)
 
@@ -710,7 +713,7 @@ class WebWeixin(object):
 			if retcode == '1101':
 				print '[*] 你在其他地方登录了 WEB 版微信，债见'
 				logging.debug('[*] 你在其他地方登录了 WEB 版微信，债见')
-				break	
+				break
 			elif retcode == '0':
 				if selector == '2':
 					r = self.webwxsync()
@@ -743,6 +746,7 @@ class WebWeixin(object):
 							print ' [失败]'
 						time.sleep(1)
 			else:
+				# for group_id in group_ids:
 				if self.webwxsendmsg(word, id):
 					print '[*] 消息发送成功'
 					logging.debug('[*] 消息发送成功')
@@ -752,6 +756,15 @@ class WebWeixin(object):
 		else:
 			print '[*] 此用户不存在'
 			logging.debug('[*] 此用户不存在')
+
+	def sendMsgToAllGroup(self, word):
+		for groupName in self.GroupList:
+			id = groupName['UserName']
+			self._echo('==>'+word)
+			if self.webwxsendmsg(word, id):
+				print '[群发成功]'
+			else:
+				print '[群发失败]'
 
 	def sendMsgToAll(self, word):
 		for contact in self.ContactList:
@@ -792,7 +805,8 @@ class WebWeixin(object):
 		self._run('[*] 获取联系人 ... ', self.webwxgetcontact)
 		self._echo('[*] 应有 %s 个联系人，读取到联系人 %d 个' % (self.MemberCount, len(self.MemberList))); print
 		self._echo('[*] 共有 %d 个群 | %d 个直接联系人 | %d 个特殊账号 ｜ %d 公众号或服务号' % (len(self.GroupList), len(self.ContactList), len(self.SpecialUsersList), len(self.PublicUsersList) )); print
-		self._run('[*] 获取群 ... ', self.webwxbatchgetcontact)		
+		self._run('[*] 获取群 ... ', self.webwxbatchgetcontact)
+		print "------------------>>>>>",self.GroupList
 		logging.debug('[*] 微信网页版 ... 开动')
 		if self.DEBUG: print self
 		logging.debug(self)
@@ -830,6 +844,10 @@ class WebWeixin(object):
 				[name, file_name] = text[3:].split(':')
 				self.sendImg(name, file_name)
 				logging.debug('发送图片')
+			elif text[:3] == '==>':
+				print '群发消息'
+				word = text[3:]
+				self.sendMsgToAllGroup(word)
 
 	def _safe_open(self, path):
 		if self.autoOpen:
@@ -889,14 +907,6 @@ class WebWeixin(object):
 		data = response.read()
 		if jsonfmt: return json.loads(data, object_hook=_decode_dict)
 		return data
-
-	def _xiaodoubi(self, word):
-		url = 'http://www.xiaodoubi.com/bot/chat.php'
-		try:
-			r = requests.post(url, data = {'chat': word})
-			return r.content
-		except:
-			return "让我一个人静静 T_T..."
 
 	def _simsimi(self, word):
 		key = ''
